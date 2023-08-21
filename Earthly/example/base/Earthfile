@@ -1,0 +1,37 @@
+VERSION 0.7
+
+SAVE_IMAGE:
+    COMMAND
+    ARG image
+    ARG version
+    ARG label
+    ARG name
+    ARG username
+    # git related labels
+    # helps identifying the specific commit that originated the image
+    ARG EARTHLY_GIT_HASH
+    ARG EARTHLY_GIT_SHORT_HASH
+    ARG EARTHLY_GIT_COMMIT_TIMESTAMP
+    ARG EARTHLY_BUILD_SHA
+    # assign labels
+    LABEL $label"-hash"=$EARTHLY_GIT_HASH
+    LABEL $label"-short-hash"=$EARTHLY_GIT_SHORT_HASH
+    LABEL $label"-build-timestamp"=$EARTHLY_GIT_COMMIT_TIMESTAMP
+    LABEL $label"-build-sha"=$EARTHLY_BUILD_SHA
+    LABEL $label"-tag"=$EARTHLY_TARGET_TAG_DOCKER
+    # platform labels, both target and user
+    # target represents the target platform the image was built platform
+    # user represents the platform where the image was built with
+    ARG TARGETPLATFORM
+    ARG USERPLATFORM
+    # assign labels
+    LABEL $label"-target-platform"=$TARGETPLATFORM
+    LABEL $label"-source-platform"=$USERPLATFORM
+    # always add image version as label
+    LABEL $label"-version"=$version
+    # add 1001 user as aip user
+    IF [ ! whoami &>/dev/null ]
+        RUN useradd -u 1001 -r -g 0 -d ${HOME} -s /sbin/nologin -c "specific user" ${username}
+    END
+    USER 1001:0
+    SAVE IMAGE $image:$version
