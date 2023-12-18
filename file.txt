@@ -1,0 +1,68 @@
+from keycloak import KeycloakAdmin, KeycloakGetError
+
+class KeycloakManager:
+    def __init__(self, server_url, username, password, realm_name, client_id, client_secret_key):
+        self.server_url = server_url
+        self.username = username
+        self.password = password
+        self.realm_name = realm_name
+        self.client_id = client_id
+        self.client_secret_key = client_secret_key
+        self.refresh_token()
+
+    def refresh_token(self):
+        self.keycloak_admin = KeycloakAdmin(
+            server_url=self.server_url,
+            username=self.username,
+            password=self.password,
+            realm_name=self.realm_name,
+            client_id=self.client_id,
+            client_secret_key=self.client_secret_key
+        )
+
+    @staticmethod
+    def handle_token_expire(func):
+        def wrapper(self, *args, **kwargs):
+            try:
+                return func(self, *args, **kwargs)
+            except KeycloakGetError as e:
+                if e.response.status_code == 401:
+                    # Token expired, refresh and retry
+                    self.refresh_token()
+                    return func(self, *args, **kwargs)
+                else:
+                    raise
+
+        return wrapper
+
+    @handle_token_expire
+    def create_client(self, client_data):
+        return self.keycloak_admin.create_client(client_data)
+
+    @handle_token_expire
+    def create_group(self, group_data):
+        return self.keycloak_admin.create_group(group_data)
+
+    @handle_token_expire
+    def create_user(self, user_data):
+        return self.keycloak_admin.create_user(user_data)
+
+if __name__ == "__main__":
+    # Usage example
+    server_url = "http://your-keycloak-server/auth/"
+    username = "admin"
+    password = "admin-password"
+    realm_name = "your-realm"
+    client_id = "admin-cli"
+    client_secret_key = "admin-cli-secret"
+
+    keycloak_manager = KeycloakManager(
+        server_url=server_url,
+        username=username,
+        password=password,
+        realm_name=realm_name,
+        client_id=client_id,
+        client_secret_key=client_secret_key
+    )
+
+    # ... rest of the code remains unchanged ...
